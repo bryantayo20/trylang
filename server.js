@@ -53,10 +53,10 @@ database.prepare('INSERT OR IGNORE INTO app_users (id, email, password_hash, cre
   .run(randomBytes(16).toString('hex'), demoEmail, demoHash, Date.now());
 const demoUser = database.prepare('SELECT id FROM app_users WHERE email = ?').get(demoEmail);
 const demoCalls = [
-  ['00000000000000000000000000000001', 'Sample Student 01', 'Grade 7 · Acacia', 'Sample Guardian 01', 'Attendance follow-up', '2026-10-20T09:30:00.000Z', 'Pending', 'Fictional demonstration record.'],
-  ['00000000000000000000000000000002', 'Sample Student 02', 'Grade 8 · Narra', 'Sample Guardian 02', 'Academic check-in', '2026-10-20T11:00:00.000Z', 'Scheduled', 'Fictional demonstration record.'],
-  ['00000000000000000000000000000003', 'Sample Student 03', 'Grade 9 · Acacia', 'Sample Guardian 03', 'Guidance referral', '2026-10-19T08:45:00.000Z', 'Completed', 'Fictional demonstration record.'],
-  ['00000000000000000000000000000004', 'Sample Student 04', 'Grade 10 · Narra', 'Sample Guardian 04', 'Well-being check-in', '2026-10-21T13:15:00.000Z', 'No answer', 'Fictional demonstration record.'],
+  ['00000000000000000000000000000001', 'Sample Student 01', 'Grade 7 · Acacia', 'Sample Guardian 01', 'Attendance follow-up', '2026-10-20T01:30:00.000Z', 'Pending', 'Fictional demonstration record.'],
+  ['00000000000000000000000000000002', 'Sample Student 02', 'Grade 8 · Narra', 'Sample Guardian 02', 'Academic check-in', '2026-10-20T03:00:00.000Z', 'Scheduled', 'Fictional demonstration record.'],
+  ['00000000000000000000000000000003', 'Sample Student 03', 'Grade 9 · Acacia', 'Sample Guardian 03', 'Guidance referral', '2026-10-19T00:45:00.000Z', 'Completed', 'Fictional demonstration record.'],
+  ['00000000000000000000000000000004', 'Sample Student 04', 'Grade 10 · Narra', 'Sample Guardian 04', 'Well-being check-in', '2026-10-21T05:15:00.000Z', 'No answer', 'Fictional demonstration record.'],
 ];
 const seedCall = database.prepare(`INSERT OR IGNORE INTO parent_calls
   (id, student_name, grade_section, parent_name, concern, scheduled_at, status, private_note, created_by, created_at, updated_at)

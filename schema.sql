@@ -42,10 +42,10 @@ INSERT INTO parent_calls (id, student_name, grade_section, parent_name, concern,
 SELECT sample.id, sample.student_name, sample.grade_section, sample.parent_name,
        sample.concern, sample.scheduled_at::timestamptz, sample.status, sample.private_note, staff.id
 FROM (VALUES
-  ('00000000-0000-4000-8000-000000000001'::uuid, 'Sample Student 01', 'Grade 7 · Acacia', 'Sample Guardian 01', 'Attendance follow-up', '2026-10-20T09:30:00Z', 'Pending', 'Fictional demonstration record.'),
-  ('00000000-0000-4000-8000-000000000002'::uuid, 'Sample Student 02', 'Grade 8 · Narra', 'Sample Guardian 02', 'Academic check-in', '2026-10-20T11:00:00Z', 'Scheduled', 'Fictional demonstration record.'),
-  ('00000000-0000-4000-8000-000000000003'::uuid, 'Sample Student 03', 'Grade 9 · Acacia', 'Sample Guardian 03', 'Guidance referral', '2026-10-19T08:45:00Z', 'Completed', 'Fictional demonstration record.'),
-  ('00000000-0000-4000-8000-000000000004'::uuid, 'Sample Student 04', 'Grade 10 · Narra', 'Sample Guardian 04', 'Well-being check-in', '2026-10-21T13:15:00Z', 'No answer', 'Fictional demonstration record.')
+  ('00000000-0000-4000-8000-000000000001'::uuid, 'Sample Student 01', 'Grade 7 · Acacia', 'Sample Guardian 01', 'Attendance follow-up', '2026-10-20T01:30:00Z', 'Pending', 'Fictional demonstration record.'),
+  ('00000000-0000-4000-8000-000000000002'::uuid, 'Sample Student 02', 'Grade 8 · Narra', 'Sample Guardian 02', 'Academic check-in', '2026-10-20T03:00:00Z', 'Scheduled', 'Fictional demonstration record.'),
+  ('00000000-0000-4000-8000-000000000003'::uuid, 'Sample Student 03', 'Grade 9 · Acacia', 'Sample Guardian 03', 'Guidance referral', '2026-10-19T00:45:00Z', 'Completed', 'Fictional demonstration record.'),
+  ('00000000-0000-4000-8000-000000000004'::uuid, 'Sample Student 04', 'Grade 10 · Narra', 'Sample Guardian 04', 'Well-being check-in', '2026-10-21T05:15:00Z', 'No answer', 'Fictional demonstration record.')
 ) AS sample(id, student_name, grade_section, parent_name, concern, scheduled_at, status, private_note)
 CROSS JOIN LATERAL (SELECT id FROM app_users WHERE email = 'guidance@nvgchs.local' LIMIT 1) AS staff
 WHERE NOT EXISTS (SELECT 1 FROM parent_calls existing WHERE existing.id = sample.id);
