@@ -1,8 +1,18 @@
 const SCHOOL_LOGO = 'public/school-seal.avif';
+const DEMO_EMAIL = 'guidance@nvgchs.local';
+const DEMO_PASSWORD = 'nvgchs123';
+const DEMO_CALLS_KEY = 'nvgchs-guidance-demo-calls';
+const DEMO_CALLS = [
+  { id: 'demo-call-01', studentName: 'Sample Student 01', gradeSection: 'Grade 7 · Acacia', parentName: 'Sample Guardian 01', concern: 'Attendance follow-up', scheduledAt: '2026-10-20T01:30:00.000Z', status: 'Pending', privateNote: 'Fictional demonstration record.' },
+  { id: 'demo-call-02', studentName: 'Sample Student 02', gradeSection: 'Grade 8 · Narra', parentName: 'Sample Guardian 02', concern: 'Academic check-in', scheduledAt: '2026-10-20T03:00:00.000Z', status: 'Scheduled', privateNote: 'Fictional demonstration record.' },
+  { id: 'demo-call-03', studentName: 'Sample Student 03', gradeSection: 'Grade 9 · Acacia', parentName: 'Sample Guardian 03', concern: 'Guidance referral', scheduledAt: '2026-10-19T00:45:00.000Z', status: 'Completed', privateNote: 'Fictional demonstration record.' },
+  { id: 'demo-call-04', studentName: 'Sample Student 04', gradeSection: 'Grade 10 · Narra', parentName: 'Sample Guardian 04', concern: 'Well-being check-in', scheduledAt: '2026-10-21T05:15:00.000Z', status: 'No answer', privateNote: 'Fictional demonstration record.' },
+];
 const app = document.querySelector('#app');
 const toast = document.querySelector('#toast');
 let user = null;
 let calls = [];
+let localDemo = false;
 let activeFilter = 'All';
 let searchText = '';
 let toastTimer;
@@ -69,8 +79,15 @@ function renderAuth() {
     button.textContent = 'Signing in…';
     errorBox.hidden = true;
     try {
-      const result = await request('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) });
-      user = result.user;
+      if (localDemo) {
+        if (String(payload.email).trim().toLowerCase() !== DEMO_EMAIL || payload.password !== DEMO_PASSWORD) {
+          throw new Error('Email or password is incorrect.');
+        }
+        user = { email: DEMO_EMAIL };
+      } else {
+        const result = await request('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) });
+        user = result.user;
+      }
       await loadCalls();
       renderDashboard();
     } catch (error) {
@@ -83,8 +100,20 @@ function renderAuth() {
 }
 
 async function loadCalls() {
+  if (localDemo) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(DEMO_CALLS_KEY) || 'null');
+      calls = Array.isArray(saved) ? saved : structuredClone(DEMO_CALLS);
+    } catch { calls = structuredClone(DEMO_CALLS); }
+    localStorage.setItem(DEMO_CALLS_KEY, JSON.stringify(calls));
+    return;
+  }
   const result = await request('/api/calls');
   calls = result.calls || [];
+}
+
+function saveDemoCalls() {
+  if (localDemo) localStorage.setItem(DEMO_CALLS_KEY, JSON.stringify(calls));
 }
 
 function formatDate(value) {
@@ -118,7 +147,7 @@ function renderDashboard() {
         <section class="page">
           <div class="welcome"><div><div class="eyebrow">Guidance Office</div><h1>Parent call records</h1><p>Record family outreach and track follow-ups.</p></div><button class="button" id="new-call" type="button">＋ New parent call</button></div>
           <div class="summary"><div class="summary-card"><div class="summary-label">Open follow-ups</div><div class="summary-value">${pending}</div></div><div class="summary-card"><div class="summary-label">Completed</div><div class="summary-value">${completed}</div></div><div class="summary-card"><div class="summary-label">No answer</div><div class="summary-value">${followUp}</div></div></div>
-          <section class="panel"><div class="panel-head"><div><div class="panel-title">Call records</div><div class="panel-caption">Only records entered by authorized staff appear here.</div></div></div>
+          <section class="panel"><div class="panel-head"><div><div class="panel-title">Call records</div><div class="panel-caption">${localDemo ? 'Presentation mode: records are saved in this browser only.' : 'Only records entered by authorized staff appear here.'}</div></div></div>
             <div class="toolbar"><input class="search" id="search" type="search" placeholder="Search records" aria-label="Search records" value="${escapeHtml(searchText)}"/><select class="filter" id="filter" aria-label="Filter by status">${['All','Pending','Scheduled','Completed','No answer'].map((status) => `<option ${status === activeFilter ? 'selected' : ''}>${status}</option>`).join('')}</select></div>
             <div class="table-wrap"><table><thead><tr><th>Student</th><th>Concern</th><th>Call date</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows || `<tr><td colspan="5" class="empty"><strong>${calls.length ? 'No matching records' : 'No call records yet'}</strong>${calls.length ? 'Try a different search or status.' : 'Add a parent call when you are ready.'}${calls.length ? '' : '<br/><button class="button" id="empty-new-call" type="button">＋ New parent call</button>'}</td></tr>`}</tbody></table></div>
           </section>
@@ -131,14 +160,22 @@ function renderDashboard() {
   document.querySelector('#filter').addEventListener('change', (event) => { activeFilter = event.target.value; renderDashboard(); });
   document.querySelector('#search').addEventListener('input', (event) => { searchText = event.target.value; const start = event.target.selectionStart; renderDashboard(); const input = document.querySelector('#search'); input.focus(); input.setSelectionRange(start, start); });
   document.querySelector('#signout').addEventListener('click', async () => {
-    try { await request('/api/auth/logout', { method: 'POST', body: '{}' }); } catch { /* Expired sessions can still return to sign-in. */ }
+    if (!localDemo) {
+      try { await request('/api/auth/logout', { method: 'POST', body: '{}' }); } catch { /* Expired sessions can still return to sign-in. */ }
+    }
     user = null; calls = []; renderAuth(false);
   });
   document.querySelectorAll('[data-call-id]').forEach((select) => select.addEventListener('change', async (event) => {
     const id = event.target.dataset.callId;
     try {
-      await request(`/api/calls/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ status: event.target.value }) });
-      await loadCalls(); renderDashboard(); showToast('Call status updated.');
+      if (localDemo) {
+        calls = calls.map((call) => String(call.id) === id ? { ...call, status: event.target.value } : call);
+        saveDemoCalls();
+      } else {
+        await request(`/api/calls/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ status: event.target.value }) });
+        await loadCalls();
+      }
+      renderDashboard(); showToast('Call status updated.');
     } catch (error) { showToast(error.message, true); }
   }));
   document.querySelectorAll('[data-edit-id]').forEach((button) => button.addEventListener('click', () => {
@@ -149,8 +186,14 @@ function renderDashboard() {
     const call = calls.find((item) => String(item.id) === button.dataset.deleteId);
     if (!call || !window.confirm(`Delete the sample call for ${call.studentName}?`)) return;
     try {
-      await request(`/api/calls/${encodeURIComponent(call.id)}`, { method: 'DELETE' });
-      await loadCalls(); renderDashboard(); showToast('Call record deleted.');
+      if (localDemo) {
+        calls = calls.filter((item) => String(item.id) !== String(call.id));
+        saveDemoCalls();
+      } else {
+        await request(`/api/calls/${encodeURIComponent(call.id)}`, { method: 'DELETE' });
+        await loadCalls();
+      }
+      renderDashboard(); showToast('Call record deleted.');
     } catch (error) { showToast(error.message, true); }
   }));
 }
@@ -182,8 +225,15 @@ function showCallForm(existing = null) {
     record.scheduledAt = new Date(record.scheduledAt).toISOString();
     submit.disabled = true; submit.textContent = 'Saving…'; error.hidden = true;
     try {
-      await request(existing ? `/api/calls/${encodeURIComponent(existing.id)}` : '/api/calls', { method: existing ? 'PUT' : 'POST', body: JSON.stringify(record) });
-      await loadCalls(); activeFilter = 'All'; searchText = ''; close(); renderDashboard(); showToast(existing ? 'Call record updated.' : 'Call record saved.');
+      if (localDemo) {
+        const updated = { ...record, id: existing?.id || `demo-call-${crypto.randomUUID()}` };
+        calls = existing ? calls.map((call) => String(call.id) === String(existing.id) ? updated : call) : [updated, ...calls];
+        saveDemoCalls();
+      } else {
+        await request(existing ? `/api/calls/${encodeURIComponent(existing.id)}` : '/api/calls', { method: existing ? 'PUT' : 'POST', body: JSON.stringify(record) });
+        await loadCalls();
+      }
+      activeFilter = 'All'; searchText = ''; close(); renderDashboard(); showToast(existing ? 'Call record updated.' : 'Call record saved.');
     } catch (problem) {
       error.textContent = problem.message; error.hidden = false; submit.disabled = false; submit.textContent = 'Save call';
     }
@@ -200,8 +250,9 @@ async function init() {
     if (result.user) { user = result.user; await loadCalls(); renderDashboard(); }
     else renderAuth(false);
   } catch {
+    localDemo = true;
     renderAuth(false);
-    showToast('Database is not connected yet. Check the database setup steps in the README.', true);
+    showToast('Presentation mode: records are saved in this browser only.', true);
   }
 }
 
