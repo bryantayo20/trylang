@@ -39,7 +39,10 @@ export async function createSession(res, userId) {
 
 export async function currentUser(req) {
   const token = cookieValue(req);
-  if (!token || token.length > 100) return null;
+  if (!token || token.length > 100) {
+    await db()`SELECT 1`;
+    return null;
+  }
   const tokenHash = createHash('sha256').update(token).digest('hex');
   const rows = await db()`
     SELECT u.id, u.email

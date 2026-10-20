@@ -18,6 +18,9 @@ export default async function handler(req, res) {
     return json(res, 200, { user: { email: user.email } });
   } catch (error) {
     console.error('Login failed:', error.message);
+    if (!process.env.DATABASE_URL) {
+      return json(res, 503, { error: 'Hindi pa nakakonekta ang Vercel database. I-set ang DATABASE_URL at patakbuhin ang schema.sql.' });
+    }
     return json(res, 500, { error: 'Sign in is temporarily unavailable.' });
   }
 }
