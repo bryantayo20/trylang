@@ -24,6 +24,8 @@ There is no public registration or password-reset flow in this prototype. The de
 
 If sign-in reports that the service cannot be reached, make sure the latest code is deployed, the `DATABASE_URL` environment variable is set for the Vercel deployment, and `schema.sql` has been run against that database.
 
+If Vercel has no database configured yet, the sample login opens presentation mode. Its call records are saved only in that browser and are not shared between devices. Connect Postgres and run `schema.sql` to use the shared database instead.
+
 ## Put it on Vercel
 
 Import this folder as a new Vercel project or push it to a Git repository and import that repository in Vercel. The `api/` directory contains the serverless endpoints. Add `DATABASE_URL`, apply `schema.sql`, and deploy.

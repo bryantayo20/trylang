@@ -40,7 +40,8 @@ export async function createSession(res, userId) {
 export async function currentUser(req) {
   const token = cookieValue(req);
   if (!token || token.length > 100) {
-    await db()`SELECT 1`;
+    await db()`SELECT id FROM app_users LIMIT 0`;
+    await db()`SELECT token_hash FROM app_sessions LIMIT 0`;
     return null;
   }
   const tokenHash = createHash('sha256').update(token).digest('hex');
