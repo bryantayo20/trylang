@@ -4,7 +4,6 @@ import { db, json } from './db.js';
 
 const scrypt = promisify(scryptCallback);
 const COOKIE = 'guidance_session';
-const SESSION_MS = 8 * 60 * 60 * 1000;
 
 export async function hashPassword(password, salt = randomBytes(16).toString('hex')) {
   const derived = await scrypt(password, salt, 64);
@@ -33,8 +32,8 @@ function cookieHeader(value, maxAge) {
 export async function createSession(res, userId) {
   const token = randomBytes(32).toString('base64url');
   const tokenHash = createHash('sha256').update(token).digest('hex');
-  const expiresAt = new Date(Date.now() + SESSION_MS);
-  await db()`INSERT INTO app_sessions (token_hash, user_id, expires_at) VALUES (${tokenHash}, ${userId}, ${expiresAt})`;
+  await db()`INSERT INTO app_sessions (token_hash, user_id, expires_at, created_at)
+    VALUES (${tokenHash}, ${userId}, now() + interval '8 hours', now())`;
   res.setHeader('Set-Cookie', cookieHeader(token, SESSION_MS / 1000));
 }
 
