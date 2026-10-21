@@ -115,6 +115,12 @@ async function verifyPassword(password, stored) {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
+async function hashPassword(password) {
+  const salt = randomBytes(16).toString('hex');
+  const derived = await scrypt(password, salt, 64);
+  return `scrypt$${salt}$${derived.toString('hex')}`;
+}
+
 async function handleApi(request, response, pathname) {
   if (request.method === 'OPTIONS') return sendJson(response, 204, {});
   if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method) && !requestOriginAllowed(request)) {
@@ -145,6 +151,56 @@ async function handleApi(request, response, pathname) {
       database.prepare('DELETE FROM app_sessions WHERE token_hash = ?').run(tokenHash);
     }
     return sendJson(response, 200, { ok: true }, { 'Set-Cookie': sessionCookie('', 0) });
+  }
+
+  if (pathname === '/api/time' && request.method === 'GET') {
+    const now = new Date();
+    return sendJson(response, 200, {
+      timestamp: now.toISOString(), timezone: 'Asia/Manila',
+      time: new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).format(now),
+      date: new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'full' }).format(now),
+    });
+  }
+  if (pathname === '/api/weather' && request.method === 'GET') {
+    try {
+      const url = new URL('https://api.open-meteo.com/v1/forecast');
+      url.search = new URLSearchParams({ latitude: '16.48', longitude: '121.15', current: 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m', timezone: 'Asia/Manila' }).toString();
+      const result = await fetch(url, { signal: AbortSignal.timeout(7000) });
+      if (!result.ok) throw new Error(`Weather provider returned ${result.status}`);
+      const data = await result.json();
+      const descriptions = { 0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Rime fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',56:'Freezing drizzle',57:'Heavy freezing drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',66:'Freezing rain',67:'Heavy freezing rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Light showers',81:'Showers',82:'Heavy showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm with hail',99:'Severe thunderstorm with hail' };
+      const current = data.current;
+      if (!current) throw new Error('Weather provider returned no current conditions');
+      return sendJson(response, 200, { location: 'Bayombong, Nueva Vizcaya', temperature: current.temperature_2m, feelsLike: current.apparent_temperature, humidity: current.relative_humidity_2m, windSpeed: current.wind_speed_10m, condition: descriptions[current.weather_code] || 'Current conditions', observedAt: current.time, units: { temperature: data.current_units?.temperature_2m || '°C', windSpeed: data.current_units?.wind_speed_10m || 'km/h' } }, { 'Cache-Control': 'public, max-age=600' });
+    } catch (error) {
+      console.error('Weather request failed:', error.message);
+      return sendJson(response, 502, { error: 'Weather information is temporarily unavailable.' });
+    }
+  }
+
+  if (pathname === '/api/staff') {
+    const user = await currentUser(request);
+    if (!user) return unauthorized(response);
+    if (request.method === 'GET') {
+      const staff = database.prepare('SELECT id, email, created_at AS createdAt FROM app_users ORDER BY created_at ASC').all();
+      return sendJson(response, 200, { staff });
+    }
+    if (request.method === 'POST') {
+      const body = await readJson(request);
+      const email = String(body.email || '').trim().toLowerCase();
+      const password = String(body.password || '');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || password.length < 8 || password.length > 200) {
+        return sendJson(response, 400, { error: 'Enter a valid email and a password of at least 8 characters.' });
+      }
+      const existing = database.prepare('SELECT id FROM app_users WHERE email = ?').get(email);
+      if (existing) return sendJson(response, 409, { error: 'That staff email already has an account.' });
+      const staffId = randomBytes(16).toString('hex');
+      const createdAt = Date.now();
+      database.prepare('INSERT INTO app_users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)').run(staffId, email, await hashPassword(password), createdAt);
+      return sendJson(response, 201, { staff: { id: staffId, email, createdAt } });
+    }
+    response.setHeader('Allow', 'GET, POST');
+    return sendJson(response, 405, { error: 'Method not allowed.' });
   }
 
   if (pathname.startsWith('/api/calls')) {
@@ -234,3 +290,4 @@ server.listen(port, '127.0.0.1', () => {
   console.log(`NVGCHS Guidance prototype running at http://127.0.0.1:${port}`);
   console.log(`Demo login: ${demoEmail} / nvgchs123`);
 });
+
