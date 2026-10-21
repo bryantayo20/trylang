@@ -7,9 +7,9 @@ export function db() {
   return client;
 }
 
-export function json(res, status, payload) {
+export function json(res, status, payload, headers = {}) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Cache-Control', headers['Cache-Control'] || 'no-store');
   return res.status(status).json(payload);
 }
 
@@ -37,3 +37,4 @@ export function readBody(req) {
   if (typeof req.body === 'object' && req.body !== null) return req.body;
   try { return JSON.parse(req.body || '{}'); } catch { return {}; }
 }
+
