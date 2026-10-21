@@ -4,6 +4,7 @@ import { db, json } from './db.js';
 
 const scrypt = promisify(scryptCallback);
 const COOKIE = 'guidance_session';
+const SESSION_MS = 8 * 60 * 60 * 1000;
 
 export async function hashPassword(password, salt = randomBytes(16).toString('hex')) {
   const derived = await scrypt(password, salt, 64);
@@ -69,3 +70,4 @@ export async function clearSession(req, res) {
   }
   res.setHeader('Set-Cookie', cookieHeader('', 0));
 }
+
