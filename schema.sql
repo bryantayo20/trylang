@@ -49,3 +49,4 @@ FROM (VALUES
 ) AS sample(id, student_name, grade_section, parent_name, concern, scheduled_at, status, private_note)
 CROSS JOIN LATERAL (SELECT id FROM app_users WHERE email = 'guidance@nvgchs.local' LIMIT 1) AS staff
 WHERE NOT EXISTS (SELECT 1 FROM parent_calls existing WHERE existing.id = sample.id);
+
