@@ -16,6 +16,7 @@ let localDemo = false;
 let activeFilter = 'All';
 let searchText = '';
 let toastTimer;
+let infoTimer;
 
 function showToast(message, isError = false) {
   toast.textContent = message;
@@ -120,6 +121,28 @@ function formatDate(value) {
   return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 }
 
+async function refreshDashboardInfo() {
+  const timeNode = document.querySelector('#live-time');
+  const dateNode = document.querySelector('#live-date');
+  const weatherNode = document.querySelector('#live-weather');
+  if (!timeNode || !dateNode || !weatherNode) return;
+  const [timeResult, weatherResult] = await Promise.allSettled([request('/api/time'), request('/api/weather')]);
+  if (timeResult.status === 'fulfilled') {
+    timeNode.textContent = timeResult.value.time;
+    dateNode.textContent = timeResult.value.date;
+  } else {
+    timeNode.textContent = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date());
+  }
+  if (weatherResult.status === 'fulfilled') {
+    const weather = weatherResult.value;
+    weatherNode.innerHTML = `<span class="weather-temp">${escapeHtml(weather.temperature)}°C</span><span>${escapeHtml(weather.condition)} · ${escapeHtml(weather.location)}</span>`;
+    weatherNode.title = `Feels like ${weather.feelsLike}°C · Humidity ${weather.humidity}% · Wind ${weather.windSpeed} ${weather.units?.windSpeed || 'km/h'}`;
+  } else {
+    weatherNode.textContent = 'Weather unavailable';
+    weatherNode.title = 'Weather information is temporarily unavailable.';
+  }
+}
+
 function renderDashboard() {
   const pending = calls.filter((call) => call.status === 'Pending' || call.status === 'Scheduled').length;
   const completed = calls.filter((call) => call.status === 'Completed').length;
@@ -143,7 +166,7 @@ function renderDashboard() {
         <div class="side-bottom"><div class="user-line"><div class="user-avatar">${escapeHtml((user?.email || 'G').slice(0,1).toUpperCase())}</div><div class="user-email" title="${escapeHtml(user?.email || '')}">${escapeHtml(user?.email || '')}</div></div><button class="signout" id="signout" type="button">Sign out</button></div>
       </aside>
       <main class="main">
-        <header class="topbar"><div class="crumb">NVGCHS <span aria-hidden="true">›</span> <strong>Guidance Office</strong></div><div class="today">${new Intl.DateTimeFormat('en-PH', { dateStyle: 'full' }).format(new Date())}</div></header>
+        <header class="topbar"><div class="crumb">NVGCHS <span aria-hidden="true">›</span> <strong>Guidance Office</strong></div><div class="topbar-info"><div class="live-clock"><strong id="live-time">Loading time…</strong><span id="live-date">Philippine time</span></div><div class="live-weather" id="live-weather" aria-live="polite">Loading weather…</div></div></header>
         <section class="page">
           <div class="welcome"><div><div class="eyebrow">Guidance Office</div><h1>Parent call records</h1><p>Record family outreach and track follow-ups.</p></div><button class="button" id="new-call" type="button">＋ New parent call</button></div>
           <div class="summary"><div class="summary-card"><div class="summary-label">Open follow-ups</div><div class="summary-value">${pending}</div></div><div class="summary-card"><div class="summary-label">Completed</div><div class="summary-value">${completed}</div></div><div class="summary-card"><div class="summary-label">No answer</div><div class="summary-value">${followUp}</div></div></div>
@@ -154,6 +177,10 @@ function renderDashboard() {
         </section>
       </main>
     </div>`;
+
+  clearInterval(infoTimer);
+  refreshDashboardInfo();
+  infoTimer = setInterval(refreshDashboardInfo, 10 * 60 * 1000);
 
   document.querySelector('#new-call')?.addEventListener('click', showCallForm);
   document.querySelector('#empty-new-call')?.addEventListener('click', showCallForm);
@@ -257,3 +284,4 @@ async function init() {
 }
 
 init();
+
