@@ -22,6 +22,14 @@ Run `schema.sql` in the hosted database SQL console. It creates the staff accoun
 
 There is no public registration or password-reset flow in this prototype. The demo login is for presentations only; keep real student records out of this deployment.
 
+## API endpoints
+
+The parent-call API is protected by staff login: `GET /api/calls` lists records, `POST /api/calls` creates one, and `/api/calls/:id` supports `PUT`, `PATCH` (status), and `DELETE`.
+
+Staff sign-in uses `POST /api/auth/login`; `GET /api/auth/me` checks the session and `POST /api/auth/logout` ends it. Signed-in staff can use `GET /api/staff` to list staff accounts and `POST /api/staff` to add one with `{ "email": "staff@example.com", "password": "at-least-8-characters" }`. There is no public registration. Staff account creation is restricted to an existing signed-in staff member.
+
+`GET /api/time` returns the current timestamp and Philippine date/time (optionally pass a supported IANA `timezone` query parameter on Vercel). `GET /api/weather` returns current weather for Bayombong, Nueva Vizcaya through Open-Meteo; it needs network access but no API key. The dashboard refreshes weather every 10 minutes.
+
 If sign-in reports that the service cannot be reached, make sure the latest code is deployed, the `DATABASE_URL` environment variable is set for the Vercel deployment, and `schema.sql` has been run against that database.
 
 If Vercel has no database configured yet, the sample login opens presentation mode. Its call records are saved only in that browser and are not shared between devices. Connect Postgres and run `schema.sql` to use the shared database instead.
@@ -31,3 +39,4 @@ If Vercel has no database configured yet, the sample login opens presentation mo
 Import this folder as a new Vercel project or push it to a Git repository and import that repository in Vercel. The `api/` directory contains the serverless endpoints. Add `DATABASE_URL`, apply `schema.sql`, and deploy.
 
 This is a prototype. Use fictional records only until the school approves production hosting, account administration, backups, and handling of student information.
+
