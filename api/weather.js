@@ -20,8 +20,7 @@ export default async function handler(req, res) {
     const data = await response.json();
     const current = data.current;
     if (!current) throw new Error('Weather provider returned no current conditions');
-    res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
-    return json(res, 200, {
+    const result = json(res, 200, {
       location: LOCATION.name,
       temperature: current.temperature_2m,
       feelsLike: current.apparent_temperature,
@@ -31,6 +30,8 @@ export default async function handler(req, res) {
       observedAt: current.time,
       units: { temperature: data.current_units?.temperature_2m || '°C', windSpeed: data.current_units?.wind_speed_10m || 'km/h' },
     });
+    res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
+    return result;
   } catch (error) {
     console.error('Weather request failed:', error.message);
     return json(res, 502, { error: 'Weather information is temporarily unavailable.' });
