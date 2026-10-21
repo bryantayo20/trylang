@@ -17,6 +17,7 @@ let activeFilter = 'All';
 let searchText = '';
 let toastTimer;
 let infoTimer;
+let clockTimer;
 
 function showToast(message, isError = false) {
   toast.textContent = message;
@@ -143,6 +144,15 @@ async function refreshDashboardInfo() {
   }
 }
 
+function tickDashboardClock() {
+  const timeNode = document.querySelector('#live-time');
+  const dateNode = document.querySelector('#live-date');
+  if (!timeNode || !dateNode) return;
+  const now = new Date();
+  timeNode.textContent = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).format(now);
+  dateNode.textContent = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'full' }).format(now);
+}
+
 function renderDashboard() {
   const pending = calls.filter((call) => call.status === 'Pending' || call.status === 'Scheduled').length;
   const completed = calls.filter((call) => call.status === 'Completed').length;
@@ -179,7 +189,9 @@ function renderDashboard() {
     </div>`;
 
   clearInterval(infoTimer);
+  clearInterval(clockTimer);
   refreshDashboardInfo();
+  clockTimer = setInterval(tickDashboardClock, 1000);
   infoTimer = setInterval(refreshDashboardInfo, 10 * 60 * 1000);
 
   document.querySelector('#new-call')?.addEventListener('click', showCallForm);
