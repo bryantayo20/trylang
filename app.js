@@ -194,8 +194,8 @@ function renderDashboard() {
   clockTimer = setInterval(tickDashboardClock, 1000);
   infoTimer = setInterval(refreshDashboardInfo, 10 * 60 * 1000);
 
-  document.querySelector('#new-call')?.addEventListener('click', showCallForm);
-  document.querySelector('#empty-new-call')?.addEventListener('click', showCallForm);
+  document.querySelector('#new-call')?.addEventListener('click', () => showCallForm());
+  document.querySelector('#empty-new-call')?.addEventListener('click', () => showCallForm());
   document.querySelector('#filter').addEventListener('change', (event) => { activeFilter = event.target.value; renderDashboard(); });
   document.querySelector('#search').addEventListener('input', (event) => { searchText = event.target.value; const start = event.target.selectionStart; renderDashboard(); const input = document.querySelector('#search'); input.focus(); input.setSelectionRange(start, start); });
   document.querySelector('#signout').addEventListener('click', async () => {
